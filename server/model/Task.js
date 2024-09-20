@@ -5,7 +5,7 @@ export const TaskSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  description: String,
+  description: { type: String },
   status: {
     type: String,
     enum: ["To Do", "In Progress", "Completed"],
@@ -16,7 +16,10 @@ export const TaskSchema = new mongoose.Schema({
     enum: ["Low", "Medium", "High"],
     default: "Medium",
   },
-  dueDate: Date,
+  dueDate: {
+    type: Date,
+    required: true,
+  },
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",

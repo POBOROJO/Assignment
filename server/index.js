@@ -23,7 +23,7 @@ app.use(cookieParser());
 app.use("/api/v1/auth", auth);
 app.use("/api/v1/task", task);
 
-app.get("/api/home", (req, res) => {
+app.get("/", (req, res) => {
   res.json({ message: "Hello World" });
 });
 
