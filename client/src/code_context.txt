@@ -354,6 +354,9 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  DragStartEvent,
+  DragMoveEvent,
+  DragEndEvent,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -371,10 +374,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import  TaskForm  from "@/app/pages/task-form";
+import TaskForm from "@/app/pages/task-form";
 import { Task } from "@/app/types/task";
 import { useToast } from "@/hooks/use-toast";
-import SortableTask  from "./sortable-task";
+import SortableTask from "./sortable-task";
+import { format } from "date-fns";
 
 const initialTasks: Task[] = [
   {
@@ -421,25 +425,56 @@ export default function KanbanBoard() {
     }),
   );
 
-  const handleDragStart = (event: any) => {
+  const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
-    setActiveId(active.id);
+    setActiveId(active.id.toString()); // Convert to string
   };
 
-  const handleDragEnd = (event: any) => {
+  const handleDragMove = (event: DragMoveEvent) => {
     const { active, over } = event;
 
-    if (active.id !== over.id) {
+    if (over && active.id !== over.id) {
       setTasks((tasks) => {
-        const oldIndex = tasks.findIndex((task) => task.id === active.id);
-        const newIndex = tasks.findIndex((task) => task.id === over.id);
+        const oldIndex = tasks.findIndex(
+          (task) => task.id === active.id.toString(),
+        );
+        const newIndex = tasks.findIndex(
+          (task) => task.id === over.id.toString(),
+        );
 
         const newTasks = arrayMove(tasks, oldIndex, newIndex);
-        newTasks[oldIndex].status = over.data.current.sortable.containerId;
+        newTasks[oldIndex].status = over.data.current?.sortable
+          .containerId as Task["status"];
 
         toast({
           title: "Task Moved",
-          description: `Task moved to ${over.data.current.sortable.containerId}`,
+          description: `Task moved to ${over.data.current?.sortable.containerId}`,
+        });
+
+        return newTasks;
+      });
+    }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setTasks((tasks) => {
+        const oldIndex = tasks.findIndex(
+          (task) => task.id === active.id.toString(),
+        );
+        const newIndex = tasks.findIndex(
+          (task) => task.id === over.id.toString(),
+        );
+
+        const newTasks = arrayMove(tasks, oldIndex, newIndex);
+        newTasks[oldIndex].status = over.data.current?.sortable
+          .containerId as Task["status"];
+
+        toast({
+          title: "Task Moved",
+          description: `Task moved to ${over.data.current?.sortable.containerId}`,
         });
 
         return newTasks;
@@ -496,6 +531,7 @@ export default function KanbanBoard() {
       sensors={sensors}
       collisionDetection={closestCorners}
       onDragStart={handleDragStart}
+      onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
@@ -551,6 +587,32 @@ export default function KanbanBoard() {
                 {tasks.find((task) => task.id === activeId)?.title}
               </CardTitle>
             </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600 mb-2">
+                {tasks.find((task) => task.id === activeId)?.description}
+              </p>
+              <div className="flex justify-between items-center">
+                <Badge
+                  className={
+                    priorityColor[
+                      tasks.find((task) => task.id === activeId)?.priority ||
+                        "Medium"
+                    ]
+                  }
+                >
+                  {tasks.find((task) => task.id === activeId)?.priority}
+                </Badge>
+                <span className="text-sm text-gray-500">
+                  Due:{" "}
+                  {format(
+                    new Date(
+                      tasks.find((task) => task.id === activeId)?.dueDate || "",
+                    ),
+                    "dd/MM/yyyy",
+                  )}
+                </span>
+              </div>
+            </CardContent>
           </Card>
         ) : null}
       </DragOverlay>
@@ -558,6 +620,7 @@ export default function KanbanBoard() {
   );
 }
 
+// File: app/pages/sortable-task.tsx
 // File: app/pages/sortable-task.tsx
 "use client";
 
@@ -573,8 +636,9 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import  TaskForm  from "./task-form";
+import TaskForm from "./task-form";
 import { Task } from "../types/task";
+import { format } from "date-fns";
 
 interface SortableTaskProps {
   id: string;
@@ -619,7 +683,7 @@ export default function SortableTask({
             {task.priority}
           </Badge>
           <span className="text-sm text-gray-500">
-            Due: {new Date(task.dueDate).toLocaleDateString()}
+            Due: {format(new Date(task.dueDate), "dd/MM/yyyy")}
           </span>
         </div>
         <div className="mt-4 space-x-2">
@@ -957,6 +1021,14 @@ export default function TaskList() {
 }
 
 // File: app/page.tsx
+"use client";
+import { useEffect, useMemo, useState } from "react";
+
+import { motion } from "framer-motion";
+
+import { MoveRight, PhoneCall } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
 export default function Page() {
   // const [message, setMessage] = useState("Loading...");
 
@@ -965,10 +1037,83 @@ export default function Page() {
   //     .then((response) => response.json())
   //     .then((data) => setMessage(data.message));
   // }, []);
+  // const [titleNumber, setTitleNumber] = useState(0);
+  const [titleNumber, setTitleNumber] = useState(0);
+  const titles = useMemo(
+    () => ["amazing", "new", "wonderful", "beautiful", "faster"],
+    [],
+  );
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (titleNumber === titles.length - 1) {
+        setTitleNumber(0);
+      } else {
+        setTitleNumber(titleNumber + 1);
+      }
+    }, 2000);
+    return () => clearTimeout(timeoutId);
+  }, [titleNumber, titles]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (titleNumber === titles.length - 1) {
+        setTitleNumber(0);
+      } else {
+        setTitleNumber(titleNumber + 1);
+      }
+    }, 2000);
+    return () => clearTimeout(timeoutId);
+  }, [titleNumber, titles]);
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-100">
-      This is the home page
+      <div className="w-full">
+        <div className="container mx-auto">
+          <div className="flex gap-8 py-20 lg:py-40 items-center justify-center flex-col">
+            <div className="flex gap-4 flex-col">
+              <h1 className="text-5xl md:text-7xl max-w-2xl tracking-tighter text-center font-regular">
+                <span className="text-spektr-cyan-50">Taskify</span>
+                <span className="relative flex w-full justify-center overflow-hidden text-center md:pb-4 md:pt-1">
+                  &nbsp;
+                  {titles.map((title, index) => (
+                    <motion.span
+                      key={index}
+                      className="absolute font-semibold"
+                      initial={{ opacity: 0, y: "-100" }}
+                      transition={{ type: "spring", stiffness: 50 }}
+                      animate={
+                        titleNumber === index
+                          ? {
+                              y: 0,
+                              opacity: 1,
+                            }
+                          : {
+                              y: titleNumber > index ? -150 : 150,
+                              opacity: 0,
+                            }
+                      }
+                    >
+                      {title}
+                    </motion.span>
+                  ))}
+                </span>
+              </h1>
+
+              <p className="text-lg md:text-xl leading-relaxed tracking-tight text-muted-foreground max-w-2xl text-center">
+                It is the time to embrace the future of task management. Our
+                mission is to revolutionize the way you manage your tasks,
+                making it easier, faster, and more efficient than ever before.
+              </p>
+            </div>
+            <div className="flex flex-row gap-3">
+              <Button size="lg" className="gap-4">
+                Get started <MoveRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
   );
 }

@@ -9,6 +9,9 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  DragStartEvent,
+  DragMoveEvent,
+  DragEndEvent,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -26,10 +29,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import  TaskForm  from "@/app/pages/task-form";
+import TaskForm from "@/app/pages/task-form";
 import { Task } from "@/app/types/task";
 import { useToast } from "@/hooks/use-toast";
-import SortableTask  from "./sortable-task";
+import SortableTask from "./sortable-task";
+import { format } from "date-fns";
 
 const initialTasks: Task[] = [
   {
@@ -76,25 +80,56 @@ export default function KanbanBoard() {
     }),
   );
 
-  const handleDragStart = (event: any) => {
+  const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
-    setActiveId(active.id);
+    setActiveId(active.id.toString()); // Convert to string
   };
 
-  const handleDragEnd = (event: any) => {
+  const handleDragMove = (event: DragMoveEvent) => {
     const { active, over } = event;
 
-    if (active.id !== over.id) {
+    if (over && active.id !== over.id) {
       setTasks((tasks) => {
-        const oldIndex = tasks.findIndex((task) => task.id === active.id);
-        const newIndex = tasks.findIndex((task) => task.id === over.id);
+        const oldIndex = tasks.findIndex(
+          (task) => task.id === active.id.toString(),
+        );
+        const newIndex = tasks.findIndex(
+          (task) => task.id === over.id.toString(),
+        );
 
         const newTasks = arrayMove(tasks, oldIndex, newIndex);
-        newTasks[oldIndex].status = over.data.current.sortable.containerId;
+        newTasks[oldIndex].status = over.data.current?.sortable
+          .containerId as Task["status"];
 
         toast({
           title: "Task Moved",
-          description: `Task moved to ${over.data.current.sortable.containerId}`,
+          description: `Task moved to ${over.data.current?.sortable.containerId}`,
+        });
+
+        return newTasks;
+      });
+    }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setTasks((tasks) => {
+        const oldIndex = tasks.findIndex(
+          (task) => task.id === active.id.toString(),
+        );
+        const newIndex = tasks.findIndex(
+          (task) => task.id === over.id.toString(),
+        );
+
+        const newTasks = arrayMove(tasks, oldIndex, newIndex);
+        newTasks[oldIndex].status = over.data.current?.sortable
+          .containerId as Task["status"];
+
+        toast({
+          title: "Task Moved",
+          description: `Task moved to ${over.data.current?.sortable.containerId}`,
         });
 
         return newTasks;
@@ -151,6 +186,7 @@ export default function KanbanBoard() {
       sensors={sensors}
       collisionDetection={closestCorners}
       onDragStart={handleDragStart}
+      onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
@@ -206,6 +242,32 @@ export default function KanbanBoard() {
                 {tasks.find((task) => task.id === activeId)?.title}
               </CardTitle>
             </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600 mb-2">
+                {tasks.find((task) => task.id === activeId)?.description}
+              </p>
+              <div className="flex justify-between items-center">
+                <Badge
+                  className={
+                    priorityColor[
+                      tasks.find((task) => task.id === activeId)?.priority ||
+                        "Medium"
+                    ]
+                  }
+                >
+                  {tasks.find((task) => task.id === activeId)?.priority}
+                </Badge>
+                <span className="text-sm text-gray-500">
+                  Due:{" "}
+                  {format(
+                    new Date(
+                      tasks.find((task) => task.id === activeId)?.dueDate || "",
+                    ),
+                    "dd/MM/yyyy",
+                  )}
+                </span>
+              </div>
+            </CardContent>
           </Card>
         ) : null}
       </DragOverlay>

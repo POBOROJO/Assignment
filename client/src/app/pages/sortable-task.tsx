@@ -12,8 +12,9 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import  TaskForm  from "./task-form";
+import TaskForm from "./task-form";
 import { Task } from "../types/task";
+import { format } from "date-fns";
 
 interface SortableTaskProps {
   id: string;
@@ -58,7 +59,7 @@ export default function SortableTask({
             {task.priority}
           </Badge>
           <span className="text-sm text-gray-500">
-            Due: {new Date(task.dueDate).toLocaleDateString()}
+            Due: {format(new Date(task.dueDate), "dd/MM/yyyy")}
           </span>
         </div>
         <div className="mt-4 space-x-2">
