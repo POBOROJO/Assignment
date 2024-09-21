@@ -1,0 +1,1297 @@
+// File: app/auth/page.tsx
+"use client";
+
+import AuthUi from "../pages/auth-ui";
+
+export default function AuthPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <AuthUi />
+    </div>
+  );
+}
+
+// File: app/form/page.tsx
+"use client";
+
+import  TaskForm  from "../pages/task-form";
+import { Task } from "../types/task";
+export default function FormPage() {
+  const handleSubmit = (task: Task) => {
+    console.log(task);
+  };
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <TaskForm onSubmit={handleSubmit} />
+    </div>
+  );
+}
+
+// File: app/globals.css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem
+  }
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%
+  }
+}
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+// File: app/kanban/page.tsx
+"use client";
+
+import KanbanBoard from "../pages/kanban-ui";
+
+export default function KanbanPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <KanbanBoard />
+    </div>
+  );
+}
+
+// File: app/layout.tsx
+import type { Metadata } from "next";
+import localFont from "next/font/local";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { Providers } from "./providers";
+
+const geistSans = localFont({
+  src: "./fonts/GeistVF.woff",
+  variable: "--font-geist-sans",
+  weight: "100 900",
+});
+const geistMono = localFont({
+  src: "./fonts/GeistMonoVF.woff",
+  variable: "--font-geist-mono",
+  weight: "100 900",
+});
+
+const inter = Inter({ subsets: ["latin"] });
+
+export const metadata = {
+  title: "Kanban Board",
+  description:
+    "A Kanban board application built with Next.js, dnd-kit, and Redux Toolkit",
+};
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body className={inter.className}>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  );
+}
+// File: app/pages/auth-ui.tsx
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+export default function AuthUi() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [activeTab, setActiveTab] = useState("login");
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState(""); // New state for username
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const router = useRouter();
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (!email || !password) {
+      setError("Please fill in all fields");
+      return;
+    }
+
+    // Here you would typically make an API call to authenticate the user
+    console.log("Logging in with:", email, password);
+    setIsLoggedIn(true);
+    router.push("/dashboard");
+  };
+
+  const handleSignup = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (!email || !username || !password || !confirmPassword) {
+      setError("Please fill in all fields");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    // Here you would typically make an API call to create a new user
+    console.log("Signing up with:", email, username, password);
+    setIsLoggedIn(true);
+    router.push("/dashboard");
+  };
+
+  const handleLogout = () => {
+    // Here you would typically make an API call to log out the user
+    setIsLoggedIn(false);
+    setEmail("");
+    setUsername("");
+    setPassword("");
+    setConfirmPassword("");
+    router.push("/");
+  };
+
+  if (isLoggedIn) {
+    return (
+      <Card className="w-[350px]">
+        <CardHeader>
+          <CardTitle>Welcome!</CardTitle>
+          <CardDescription>You are logged in.</CardDescription>
+        </CardHeader>
+        <CardFooter>
+          <Button onClick={handleLogout} className="w-full">
+            Log Out
+          </Button>
+        </CardFooter>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="w-[350px]">
+      <CardHeader>
+        <CardTitle>Authentication</CardTitle>
+        <CardDescription>Sign up or log in to your account.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="login">Login</TabsTrigger>
+            <TabsTrigger value="signup">Sign Up</TabsTrigger>
+          </TabsList>
+          {/* Login tab */}
+          <TabsContent value="login">
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="m@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+              {error && (
+                <Alert variant="destructive">
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              <Button type="submit" className="w-full">
+                Log In
+              </Button>
+            </form>
+          </TabsContent>
+          {/* SignUp */}
+          <TabsContent value="signup">
+            <form onSubmit={handleSignup} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="signup-email">Email</Label>
+                <Input
+                  id="signup-email"
+                  type="email"
+                  placeholder="m@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="signup-username">Username</Label>
+                <Input
+                  id="signup-username"
+                  type="text"
+                  placeholder="johndoe"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="signup-password">Password</Label>
+                <Input
+                  id="signup-password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">Confirm Password</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+              </div>
+              {error && (
+                <Alert variant="destructive">
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              <Button type="submit" className="w-full">
+                Sign Up
+              </Button>
+            </form>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
+  );
+}
+
+// File: app/pages/kanban-ui.tsx
+"use client";
+
+import { useState } from "react";
+import {
+  DndContext,
+  DragOverlay,
+  closestCorners,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import  TaskForm  from "@/app/pages/task-form";
+import { Task } from "@/app/types/task";
+import { useToast } from "@/hooks/use-toast";
+import SortableTask  from "./sortable-task";
+
+const initialTasks: Task[] = [
+  {
+    id: "1",
+    title: "Complete project",
+    description: "Finish the main features",
+    status: "In Progress",
+    priority: "High",
+    dueDate: "2023-12-31",
+  },
+  {
+    id: "2",
+    title: "Write documentation",
+    description: "Document the API",
+    status: "To Do",
+    priority: "Medium",
+    dueDate: "2024-01-15",
+  },
+  {
+    id: "3",
+    title: "Test application",
+    description: "Run all test suites",
+    status: "Completed",
+    priority: "Low",
+    dueDate: "2023-12-20",
+  },
+];
+
+const columns: { [key: string]: Task["status"] } = {
+  "To Do": "To Do",
+  "In Progress": "In Progress",
+  Completed: "Completed",
+};
+
+export default function KanbanBoard() {
+  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const handleDragStart = (event: any) => {
+    const { active } = event;
+    setActiveId(active.id);
+  };
+
+  const handleDragEnd = (event: any) => {
+    const { active, over } = event;
+
+    if (active.id !== over.id) {
+      setTasks((tasks) => {
+        const oldIndex = tasks.findIndex((task) => task.id === active.id);
+        const newIndex = tasks.findIndex((task) => task.id === over.id);
+
+        const newTasks = arrayMove(tasks, oldIndex, newIndex);
+        newTasks[oldIndex].status = over.data.current.sortable.containerId;
+
+        toast({
+          title: "Task Moved",
+          description: `Task moved to ${over.data.current.sortable.containerId}`,
+        });
+
+        return newTasks;
+      });
+    }
+
+    setActiveId(null);
+  };
+
+  const handleDragCancel = () => {
+    setActiveId(null);
+  };
+
+  const handleCreateTask = (newTask: Task) => {
+    setTasks((prevTasks) => [
+      ...prevTasks,
+      { ...newTask, id: Date.now().toString() },
+    ]);
+    toast({
+      title: "Task Created",
+      description: "Your new task has been successfully created.",
+    });
+  };
+
+  const handleEditTask = (updatedTask: Task) => {
+    setTasks((prevTasks) =>
+      prevTasks.map((task) =>
+        task.id === updatedTask.id ? updatedTask : task,
+      ),
+    );
+    toast({
+      title: "Task Updated",
+      description: "Your task has been successfully updated.",
+    });
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    setTasks((prevTasks) => prevTasks.filter((task) => task.id !== taskId));
+    toast({
+      title: "Task Deleted",
+      description: "Your task has been successfully deleted.",
+      variant: "destructive",
+    });
+  };
+
+  const priorityColor = {
+    Low: "bg-green-100 text-green-800",
+    Medium: "bg-yellow-100 text-yellow-800",
+    High: "bg-red-100 text-red-800",
+  };
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
+      <div className="container mx-auto p-4">
+        <h1 className="text-2xl font-bold mb-4">Kanban Board</h1>
+        <div className="mb-4">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button>Create Task</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New Task</DialogTitle>
+              </DialogHeader>
+              <TaskForm onSubmit={handleCreateTask} />
+            </DialogContent>
+          </Dialog>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {Object.entries(columns).map(([columnId, status]) => (
+            <div key={columnId} className="bg-gray-100 p-4 rounded-lg">
+              <h2 className="text-xl font-semibold mb-4">{status}</h2>
+              <SortableContext
+                items={tasks
+                  .filter((task) => task.status === status)
+                  .map((task) => task.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-2 min-h-[200px]">
+                  {tasks
+                    .filter((task) => task.status === status)
+                    .map((task) => (
+                      <SortableTask
+                        key={task.id}
+                        id={task.id}
+                        task={task}
+                        onEdit={handleEditTask}
+                        onDelete={handleDeleteTask}
+                        priorityColor={priorityColor}
+                      />
+                    ))}
+                </div>
+              </SortableContext>
+            </div>
+          ))}
+        </div>
+      </div>
+      <DragOverlay>
+        {activeId ? (
+          <Card className="mb-2 cursor-move">
+            <CardHeader>
+              <CardTitle className="text-lg">
+                {tasks.find((task) => task.id === activeId)?.title}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  );
+}
+
+// File: app/pages/sortable-task.tsx
+"use client";
+
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import  TaskForm  from "./task-form";
+import { Task } from "../types/task";
+
+interface SortableTaskProps {
+  id: string;
+  task: Task;
+  onEdit: (task: Task) => void;
+  onDelete: (id: string) => void;
+  priorityColor: {
+    [key: string]: string;
+  };
+}
+
+export default function SortableTask({
+  id,
+  task,
+  onEdit,
+  onDelete,
+  priorityColor,
+}: SortableTaskProps) {
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({ id: id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <Card
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="mb-2 cursor-move"
+    >
+      <CardHeader>
+        <CardTitle className="text-lg">{task.title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-gray-600 mb-2">{task.description}</p>
+        <div className="flex justify-between items-center">
+          <Badge className={priorityColor[task.priority]}>
+            {task.priority}
+          </Badge>
+          <span className="text-sm text-gray-500">
+            Due: {new Date(task.dueDate).toLocaleDateString()}
+          </span>
+        </div>
+        <div className="mt-4 space-x-2">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                Edit
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Task</DialogTitle>
+              </DialogHeader>
+              <TaskForm task={task} onSubmit={onEdit} />
+            </DialogContent>
+          </Dialog>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => onDelete(task.id)}
+          >
+            Delete
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// File: app/pages/task-form.tsx
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Task } from "../types/task";
+interface TaskFormProps {
+  task?: Task;
+  onSubmit: (task: Task) => void;
+}
+
+export default function TaskForm({ task, onSubmit }: TaskFormProps) {
+  const [formData, setFormData] = useState<Task>({
+    id: task?.id || "",
+    title: task?.title || "",
+    description: task?.description || "",
+    status: task?.status || "To Do",
+    priority: task?.priority || "Medium",
+    dueDate: task?.dueDate || "",
+  });
+  const [error, setError] = useState("");
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSelectChange = (name: string) => (value: string) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (!formData.title) {
+      setError("Title is required");
+      return;
+    }
+
+    onSubmit(formData);
+  };
+
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Task Form</h1>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <Label htmlFor="title">Title</Label>
+          <Input
+            id="title"
+            name="title"
+            value={formData.title}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="description">Description</Label>
+          <Textarea
+            id="description"
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+          />
+        </div>
+        <div>
+          <Label htmlFor="status">Status</Label>
+          <Select
+            name="status"
+            value={formData.status}
+            onValueChange={handleSelectChange("status")}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="To Do">To Do</SelectItem>
+              <SelectItem value="In Progress">In Progress</SelectItem>
+              <SelectItem value="Completed">Completed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="priority">Priority</Label>
+          <Select
+            name="priority"
+            value={formData.priority}
+            onValueChange={handleSelectChange("priority")}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select priority" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Low">Low</SelectItem>
+              <SelectItem value="Medium">Medium</SelectItem>
+              <SelectItem value="High">High</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="dueDate">Due Date</Label>
+          <Input
+            id="dueDate"
+            name="dueDate"
+            type="date"
+            value={formData.dueDate}
+            onChange={handleChange}
+          />
+        </div>
+        {error && (
+          <Alert variant="destructive">
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        <Button type="submit">{task ? "Update Task" : "Create Task"}</Button>
+      </form>
+    </div>
+  );
+}
+
+// File: app/pages/task-list.tsx
+"use client";
+
+import { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import  {useToast}  from "@/hooks/use-toast";
+import  TaskForm  from "@/app/pages/task-form";
+import { RootState } from "@/app/store/store";
+import { Task, updateTask, deleteTask } from "@/app/store/tasksSlice";
+
+export default function TaskList() {
+  const dispatch = useDispatch();
+  const tasks = useSelector((state: RootState) => state.tasks.tasks);
+  const { toast } = useToast();
+  const [filter, setFilter] = useState({ status: "", priority: "" });
+  const [sort, setSort] = useState<keyof Task>("dueDate");
+  const [search, setSearch] = useState("");
+
+  const handleEditTask = (updatedTask: Task) => {
+    dispatch(updateTask(updatedTask));
+    toast({
+      title: "Task Updated",
+      description: "Your task has been successfully updated.",
+    });
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    dispatch(deleteTask(taskId));
+    toast({
+      title: "Task Deleted",
+      description: "Your task has been successfully deleted.",
+      variant: "destructive",
+    });
+  };
+
+  const filteredAndSortedTasks = tasks
+    .filter(
+      (task) =>
+        (filter.status ? task.status === filter.status : true) &&
+        (filter.priority ? task.priority === filter.priority : true) &&
+        (search
+          ? task.title.toLowerCase().includes(search.toLowerCase())
+          : true),
+    )
+    .sort((a, b) => {
+      if (a[sort] < b[sort]) return -1;
+      if (a[sort] > b[sort]) return 1;
+      return 0;
+    });
+
+  const priorityColor = {
+    Low: "bg-green-100 text-green-800",
+    Medium: "bg-yellow-100 text-yellow-800",
+    High: "bg-red-100 text-red-800",
+  };
+
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Task List</h1>
+      <div className="mb-4 flex flex-wrap gap-4">
+        <Select
+          onValueChange={(value) =>
+            setFilter((prev) => ({ ...prev, status: value }))
+          }
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="default">All Statuses</SelectItem>
+            <SelectItem value="To Do">To Do</SelectItem>
+            <SelectItem value="In Progress">In Progress</SelectItem>
+            <SelectItem value="Completed">Completed</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select
+          onValueChange={(value) =>
+            setFilter((prev) => ({ ...prev, priority: value }))
+          }
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by Priority" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="default">All Priorities</SelectItem>
+            <SelectItem value="Low">Low</SelectItem>
+            <SelectItem value="Medium">Medium</SelectItem>
+            <SelectItem value="High">High</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select onValueChange={(value) => setSort(value as keyof Task)}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="dueDate">Due Date</SelectItem>
+            <SelectItem value="priority">Priority</SelectItem>
+            <SelectItem value="status">Status</SelectItem>
+          </SelectContent>
+        </Select>
+        <Input
+          placeholder="Search tasks"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full sm:w-auto"
+        />
+      </div>
+      <div className="space-y-4">
+        {filteredAndSortedTasks.map((task) => (
+          <Card key={task.id}>
+            <CardHeader>
+              <CardTitle className="text-lg">{task.title}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600 mb-2">{task.description}</p>
+              <div className="flex justify-between items-center">
+                <Badge>{task.status}</Badge>
+                <Badge className={priorityColor[task.priority]}>
+                  {task.priority}
+                </Badge>
+                <span className="text-sm text-gray-500">
+                  Due: {new Date(task.dueDate).toLocaleDateString()}
+                </span>
+              </div>
+              <div className="mt-4 space-x-2">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      Edit
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Edit Task</DialogTitle>
+                    </DialogHeader>
+                    <TaskForm task={task} onSubmit={handleEditTask} />
+                  </DialogContent>
+                </Dialog>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => handleDeleteTask(task.id)}
+                >
+                  Delete
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// File: app/page.tsx
+export default function Page() {
+  // const [message, setMessage] = useState("Loading...");
+
+  // useEffect(() => {
+  //   fetch("http://localhost:8080/")
+  //     .then((response) => response.json())
+  //     .then((data) => setMessage(data.message));
+  // }, []);
+
+  return (
+    <main className="min-h-screen flex items-center justify-center bg-gray-100">
+      This is the home page
+    </main>
+  );
+}
+
+// File: app/providers.tsx
+"use client";
+
+import { Provider } from "react-redux";
+import { store } from "./store/store";
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return <Provider store={store}>{children}</Provider>;
+}
+// File: app/store/store.ts
+import { configureStore } from "@reduxjs/toolkit";
+import tasksReducer from "./tasksSlice";
+
+export const store = configureStore({
+  reducer: {
+    tasks: tasksReducer,
+  },
+});
+
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
+
+// File: app/store/tasksSlice.ts
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string;
+  status: "To Do" | "In Progress" | "Completed";
+  priority: "Low" | "Medium" | "High";
+  dueDate: string;
+}
+
+interface TasksState {
+  tasks: Task[];
+}
+
+const initialState: TasksState = {
+  tasks: [
+    {
+      id: "1",
+      title: "Complete project",
+      description: "Finish the main features",
+      status: "In Progress",
+      priority: "High",
+      dueDate: "2023-12-31",
+    },
+    {
+      id: "2",
+      title: "Write documentation",
+      description: "Document the API",
+      status: "To Do",
+      priority: "Medium",
+      dueDate: "2024-01-15",
+    },
+    {
+      id: "3",
+      title: "Test application",
+      description: "Run all test suites",
+      status: "Completed",
+      priority: "Low",
+      dueDate: "2023-12-20",
+    },
+  ],
+};
+
+export const tasksSlice = createSlice({
+  name: "tasks",
+  initialState,
+  reducers: {
+    addTask: (state, action: PayloadAction<Task>) => {
+      state.tasks.push(action.payload);
+    },
+    updateTask: (state, action: PayloadAction<Task>) => {
+      const index = state.tasks.findIndex(
+        (task) => task.id === action.payload.id,
+      );
+      if (index !== -1) {
+        state.tasks[index] = action.payload;
+      }
+    },
+    deleteTask: (state, action: PayloadAction<string>) => {
+      state.tasks = state.tasks.filter((task) => task.id !== action.payload);
+    },
+    moveTask: (
+      state,
+      action: PayloadAction<{ taskId: string; newStatus: Task["status"] }>,
+    ) => {
+      const task = state.tasks.find(
+        (task) => task.id === action.payload.taskId,
+      );
+      if (task) {
+        task.status = action.payload.newStatus;
+      }
+    },
+  },
+});
+
+export const { addTask, updateTask, deleteTask, moveTask } = tasksSlice.actions;
+
+export default tasksSlice.reducer;
+
+// File: app/task/page.tsx
+"use client";
+
+import TaskList from "../pages/task-list";
+
+export default function TaskPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <TaskList />
+    </div>
+  );
+}
+
+// File: app/types/task.ts
+export interface Task {
+  id: string;
+  title: string;
+  description: string;
+  status: "To Do" | "In Progress" | "Completed";
+  priority: "Low" | "Medium" | "High";
+  dueDate: string;
+}
+
+// File: hooks/use-toast.ts
+"use client"
+
+// Inspired by react-hot-toast library
+import * as React from "react"
+
+import type {
+  ToastActionElement,
+  ToastProps,
+} from "@/components/ui/toast"
+
+const TOAST_LIMIT = 1
+const TOAST_REMOVE_DELAY = 1000000
+
+type ToasterToast = ToastProps & {
+  id: string
+  title?: React.ReactNode
+  description?: React.ReactNode
+  action?: ToastActionElement
+}
+
+const actionTypes = {
+  ADD_TOAST: "ADD_TOAST",
+  UPDATE_TOAST: "UPDATE_TOAST",
+  DISMISS_TOAST: "DISMISS_TOAST",
+  REMOVE_TOAST: "REMOVE_TOAST",
+} as const
+
+let count = 0
+
+function genId() {
+  count = (count + 1) % Number.MAX_SAFE_INTEGER
+  return count.toString()
+}
+
+type ActionType = typeof actionTypes
+
+type Action =
+  | {
+      type: ActionType["ADD_TOAST"]
+      toast: ToasterToast
+    }
+  | {
+      type: ActionType["UPDATE_TOAST"]
+      toast: Partial<ToasterToast>
+    }
+  | {
+      type: ActionType["DISMISS_TOAST"]
+      toastId?: ToasterToast["id"]
+    }
+  | {
+      type: ActionType["REMOVE_TOAST"]
+      toastId?: ToasterToast["id"]
+    }
+
+interface State {
+  toasts: ToasterToast[]
+}
+
+const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
+
+const addToRemoveQueue = (toastId: string) => {
+  if (toastTimeouts.has(toastId)) {
+    return
+  }
+
+  const timeout = setTimeout(() => {
+    toastTimeouts.delete(toastId)
+    dispatch({
+      type: "REMOVE_TOAST",
+      toastId: toastId,
+    })
+  }, TOAST_REMOVE_DELAY)
+
+  toastTimeouts.set(toastId, timeout)
+}
+
+export const reducer = (state: State, action: Action): State => {
+  switch (action.type) {
+    case "ADD_TOAST":
+      return {
+        ...state,
+        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
+      }
+
+    case "UPDATE_TOAST":
+      return {
+        ...state,
+        toasts: state.toasts.map((t) =>
+          t.id === action.toast.id ? { ...t, ...action.toast } : t
+        ),
+      }
+
+    case "DISMISS_TOAST": {
+      const { toastId } = action
+
+      // ! Side effects ! - This could be extracted into a dismissToast() action,
+      // but I'll keep it here for simplicity
+      if (toastId) {
+        addToRemoveQueue(toastId)
+      } else {
+        state.toasts.forEach((toast) => {
+          addToRemoveQueue(toast.id)
+        })
+      }
+
+      return {
+        ...state,
+        toasts: state.toasts.map((t) =>
+          t.id === toastId || toastId === undefined
+            ? {
+                ...t,
+                open: false,
+              }
+            : t
+        ),
+      }
+    }
+    case "REMOVE_TOAST":
+      if (action.toastId === undefined) {
+        return {
+          ...state,
+          toasts: [],
+        }
+      }
+      return {
+        ...state,
+        toasts: state.toasts.filter((t) => t.id !== action.toastId),
+      }
+  }
+}
+
+const listeners: Array<(state: State) => void> = []
+
+let memoryState: State = { toasts: [] }
+
+function dispatch(action: Action) {
+  memoryState = reducer(memoryState, action)
+  listeners.forEach((listener) => {
+    listener(memoryState)
+  })
+}
+
+type Toast = Omit<ToasterToast, "id">
+
+function toast({ ...props }: Toast) {
+  const id = genId()
+
+  const update = (props: ToasterToast) =>
+    dispatch({
+      type: "UPDATE_TOAST",
+      toast: { ...props, id },
+    })
+  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
+
+  dispatch({
+    type: "ADD_TOAST",
+    toast: {
+      ...props,
+      id,
+      open: true,
+      onOpenChange: (open) => {
+        if (!open) dismiss()
+      },
+    },
+  })
+
+  return {
+    id: id,
+    dismiss,
+    update,
+  }
+}
+
+function useToast() {
+  const [state, setState] = React.useState<State>(memoryState)
+
+  React.useEffect(() => {
+    listeners.push(setState)
+    return () => {
+      const index = listeners.indexOf(setState)
+      if (index > -1) {
+        listeners.splice(index, 1)
+      }
+    }
+  }, [state])
+
+  return {
+    ...state,
+    toast,
+    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
+  }
+}
+
+export { useToast, toast }
+

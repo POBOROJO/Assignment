@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { Inter } from "next/font/google";
-import { store } from "./store/store";
 import "./globals.css";
-import { Provider } from "react-redux";
+import { Providers } from "./providers";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -28,7 +27,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Provider store={store}>{children}</Provider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

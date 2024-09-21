@@ -1,5 +1,3 @@
-import React, { useState, useEffect } from "react";
-
 export default function Page() {
   // const [message, setMessage] = useState("Loading...");
 
