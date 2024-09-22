@@ -55,3 +55,5 @@ Build a Task List Screen: Build a Task List screen in Next.js using Shadcn and T
 Build a Kanban Board Screen: Build a Kanban board screen in Next.js using Shadcn and TailwindCSS. Display tasks in columns categorized as "To Do," "In Progress," and "Completed." Implement drag-and-drop functionality for moving tasks between statuses dynamically, and update the task status immediately when moved. Ensure the design is fully responsive across mobile, tablet, and desktop screens.
 
 Build Forms for Managing Tasks: Build forms for managing tasks in Next.js using Shadcn and TailwindCSS. Include fields like Title (required), Description (optional), Status (To Do, In Progress, Completed), Priority (Low, Medium, High), and Due Date (optional). Use Shadcn modal components for displaying the forms, implement validation, and display error messages appropriately. Ensure the forms are responsive and provide notifications for task creation, editing, or deletion.
+
+https://kanban-api-bxzc.onrender.com/
