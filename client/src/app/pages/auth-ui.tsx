@@ -1,7 +1,8 @@
+// app/pages/auth-ui.tsx
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,16 +18,15 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function AuthUi() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { login, register } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState(""); // New state for username
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
-  const router = useRouter();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -35,13 +35,14 @@ export default function AuthUi() {
       return;
     }
 
-    // Here you would typically make an API call to authenticate the user
-    console.log("Logging in with:", email, password);
-    setIsLoggedIn(true);
-    router.push("/dashboard");
+    try {
+      await login(email, password);
+    } catch (error) {
+      setError("Login failed");
+    }
   };
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -55,37 +56,12 @@ export default function AuthUi() {
       return;
     }
 
-    // Here you would typically make an API call to create a new user
-    console.log("Signing up with:", email, username, password);
-    setIsLoggedIn(true);
-    router.push("/dashboard");
+    try {
+      await register(email, username, password);
+    } catch (error) {
+      setError("Registration failed");
+    }
   };
-
-  const handleLogout = () => {
-    // Here you would typically make an API call to log out the user
-    setIsLoggedIn(false);
-    setEmail("");
-    setUsername("");
-    setPassword("");
-    setConfirmPassword("");
-    router.push("/");
-  };
-
-  if (isLoggedIn) {
-    return (
-      <Card className="w-[350px]">
-        <CardHeader>
-          <CardTitle>Welcome!</CardTitle>
-          <CardDescription>You are logged in.</CardDescription>
-        </CardHeader>
-        <CardFooter>
-          <Button onClick={handleLogout} className="w-full">
-            Log Out
-          </Button>
-        </CardFooter>
-      </Card>
-    );
-  }
 
   return (
     <Card className="w-[350px]">

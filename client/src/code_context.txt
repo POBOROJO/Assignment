@@ -11,15 +11,169 @@ export default function AuthPage() {
   );
 }
 
-// File: app/form/page.tsx
+// File: app/context/AuthContext.tsx
+// File: app/context/AuthContext.tsx
 "use client";
 
-import  TaskForm  from "../pages/task-form";
-import { Task } from "../types/task";
-export default function FormPage() {
-  const handleSubmit = (task: Task) => {
-    console.log(task);
+import { createContext, useContext, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import api from "@/lib/api";
+
+interface AuthContextType {
+  isLoggedIn: boolean;
+  token: string | null;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => void;
+  register: (
+    email: string,
+    username: string,
+    password: string,
+  ) => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    // Check if the user is already logged in (e.g., via local storage)
+    const storedToken = localStorage.getItem("token");
+    if (storedToken) {
+      setToken(storedToken);
+      setIsLoggedIn(true);
+    }
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    try {
+      const response = await api.post("/auth/login", { email, password });
+      localStorage.setItem("token", response.data.token);
+      setToken(response.data.token);
+      setIsLoggedIn(true);
+      router.push("/form");
+    } catch (error) {
+      console.error("Login failed", error);
+      throw error;
+    }
   };
+
+  const logout = async () => {
+    try {
+      await api.get("/auth/logout");
+      localStorage.removeItem("token");
+      setToken(null);
+      setIsLoggedIn(false);
+      router.push("/auth");
+    } catch (error) {
+      console.error("Logout failed", error);
+    }
+  };
+
+  const register = async (
+    email: string,
+    username: string,
+    password: string,
+  ) => {
+    try {
+      await api.post("/auth/register", { email, username, password });
+      await login(email, password);
+    } catch (error) {
+      console.error("Registration failed", error);
+      throw error;
+    }
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{ isLoggedIn, token, login, logout, register }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};
+
+// File: app/form/page.tsx
+// "use client";
+
+// import TaskForm from "@/app/pages/task-form";
+// import { Task } from "@/app/types/task";
+// import { useDispatch } from "react-redux";
+// import { AppDispatch } from "@/app/store/store";
+// import { addTask } from "@/app/store/tasksSlice";
+// import { useToast } from "@/hooks/use-toast";
+// import ProtectedRoute from "@/components/route/ProtectedRoute";
+
+// export default function FormPage() {
+//   const dispatch = useDispatch<AppDispatch>();
+//   const { toast } = useToast();
+
+//   const handleSubmit = async (task: Omit<Task, "id">) => {
+//     try {
+//       await dispatch(addTask(task)).unwrap();
+//       toast({
+//         title: "Task Created",
+//         description: "Your new task has been successfully created.",
+//       });
+//     } catch (error) {
+//       console.error("Failed to create task:", error);
+//       toast({
+//         title: "Error",
+//         description: "Failed to create task. Please try again.",
+//         variant: "destructive",
+//       });
+//     }
+//   };
+
+//   return (
+//     <ProtectedRoute>
+//       <div className="min-h-screen flex items-center justify-center bg-gray-100">
+//         <TaskForm onSubmit={handleSubmit} />
+//       </div>
+//     </ProtectedRoute>
+//   );
+// }
+
+"use client";
+
+import TaskForm from "@/app/pages/task-form";
+import { Task } from "@/app/types/task";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "@/app/store/store";
+import { addTask } from "@/app/store/tasksSlice";
+import { useToast } from "@/hooks/use-toast";
+
+export default function FormPage() {
+  const dispatch = useDispatch<AppDispatch>();
+  const { toast } = useToast();
+
+  const handleSubmit = async (task: Omit<Task, "id">) => {
+    try {
+      await dispatch(addTask(task)).unwrap();
+      toast({
+        title: "Task Created",
+        description: "Your new task has been successfully created.",
+      });
+    } catch (error) {
+      console.error("Failed to create task:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create task. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <TaskForm onSubmit={handleSubmit} />
@@ -99,6 +253,16 @@ export default function FormPage() {
 "use client";
 
 import KanbanBoard from "../pages/kanban-ui";
+import ProtectedRoute from "@/components/route/ProtectedRoute";
+// export default function KanbanPage() {
+//   return (
+//     <ProtectedRoute>
+//       <div className="min-h-screen flex items-center justify-center bg-gray-100">
+//         <KanbanBoard />
+//       </div>
+//     </ProtectedRoute>
+//   );
+// }
 
 export default function KanbanPage() {
   return (
@@ -109,11 +273,14 @@ export default function KanbanPage() {
 }
 
 // File: app/layout.tsx
+// File: app/layout.tsx
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { AuthProvider } from "./context/AuthContext";
+import { Toaster } from "@/components/ui/toaster";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -138,11 +305,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Providers>{children}</Providers>
+        <AuthProvider>
+          <Providers>
+            {children}
+            <Toaster />
+          </Providers>
+        </AuthProvider>
       </body>
     </html>
   );
 }
+
 // File: app/pages/auth-ui.tsx
 "use client";
 
@@ -184,7 +357,7 @@ export default function AuthUi() {
     // Here you would typically make an API call to authenticate the user
     console.log("Logging in with:", email, password);
     setIsLoggedIn(true);
-    router.push("/dashboard");
+    router.push("/form");
   };
 
   const handleSignup = (e: React.FormEvent) => {
@@ -204,7 +377,7 @@ export default function AuthUi() {
     // Here you would typically make an API call to create a new user
     console.log("Signing up with:", email, username, password);
     setIsLoggedIn(true);
-    router.push("/dashboard");
+    router.push("/form");
   };
 
   const handleLogout = () => {
@@ -343,9 +516,8 @@ export default function AuthUi() {
 }
 
 // File: app/pages/kanban-ui.tsx
-"use client";
-
 import { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
   DndContext,
   DragOverlay,
@@ -355,57 +527,22 @@ import {
   useSensor,
   useSensors,
   DragStartEvent,
-  DragMoveEvent,
   DragEndEvent,
 } from "@dnd-kit/core";
 import {
-  arrayMove,
   SortableContext,
+  arrayMove,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import TaskForm from "@/app/pages/task-form";
 import { Task } from "@/app/types/task";
 import { useToast } from "@/hooks/use-toast";
 import SortableTask from "./sortable-task";
 import { format } from "date-fns";
-
-const initialTasks: Task[] = [
-  {
-    id: "1",
-    title: "Complete project",
-    description: "Finish the main features",
-    status: "In Progress",
-    priority: "High",
-    dueDate: "2023-12-31",
-  },
-  {
-    id: "2",
-    title: "Write documentation",
-    description: "Document the API",
-    status: "To Do",
-    priority: "Medium",
-    dueDate: "2024-01-15",
-  },
-  {
-    id: "3",
-    title: "Test application",
-    description: "Run all test suites",
-    status: "Completed",
-    priority: "Low",
-    dueDate: "2023-12-20",
-  },
-];
+import { RootState } from "@/app/store/store";
+import { moveTask } from "@/app/store/tasksSlice";
 
 const columns: { [key: string]: Task["status"] } = {
   "To Do": "To Do",
@@ -414,7 +551,8 @@ const columns: { [key: string]: Task["status"] } = {
 };
 
 export default function KanbanBoard() {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const dispatch = useDispatch();
+  const tasks = useSelector((state: RootState) => state.tasks.tasks);
   const [activeId, setActiveId] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -427,97 +565,32 @@ export default function KanbanBoard() {
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
-    setActiveId(active.id.toString()); // Convert to string
-  };
-
-  const handleDragMove = (event: DragMoveEvent) => {
-    const { active, over } = event;
-
-    if (over && active.id !== over.id) {
-      setTasks((tasks) => {
-        const oldIndex = tasks.findIndex(
-          (task) => task.id === active.id.toString(),
-        );
-        const newIndex = tasks.findIndex(
-          (task) => task.id === over.id.toString(),
-        );
-
-        const newTasks = arrayMove(tasks, oldIndex, newIndex);
-        newTasks[oldIndex].status = over.data.current?.sortable
-          .containerId as Task["status"];
-
-        toast({
-          title: "Task Moved",
-          description: `Task moved to ${over.data.current?.sortable.containerId}`,
-        });
-
-        return newTasks;
-      });
-    }
+    setActiveId(active.id.toString());
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      setTasks((tasks) => {
-        const oldIndex = tasks.findIndex(
-          (task) => task.id === active.id.toString(),
-        );
-        const newIndex = tasks.findIndex(
-          (task) => task.id === over.id.toString(),
-        );
+      const activeTask = tasks.find((task) => task.id === active.id);
+      const overColumn = over.data.current?.sortable
+        .containerId as Task["status"];
 
-        const newTasks = arrayMove(tasks, oldIndex, newIndex);
-        newTasks[oldIndex].status = over.data.current?.sortable
-          .containerId as Task["status"];
-
+      if (activeTask && activeTask.status !== overColumn) {
+        dispatch(
+          moveTask({
+            taskId: active.id.toString(),
+            newStatus: overColumn,
+          }),
+        );
         toast({
           title: "Task Moved",
-          description: `Task moved to ${over.data.current?.sortable.containerId}`,
+          description: `Task moved to ${overColumn}`,
         });
-
-        return newTasks;
-      });
+      }
     }
 
     setActiveId(null);
-  };
-
-  const handleDragCancel = () => {
-    setActiveId(null);
-  };
-
-  const handleCreateTask = (newTask: Task) => {
-    setTasks((prevTasks) => [
-      ...prevTasks,
-      { ...newTask, id: Date.now().toString() },
-    ]);
-    toast({
-      title: "Task Created",
-      description: "Your new task has been successfully created.",
-    });
-  };
-
-  const handleEditTask = (updatedTask: Task) => {
-    setTasks((prevTasks) =>
-      prevTasks.map((task) =>
-        task.id === updatedTask.id ? updatedTask : task,
-      ),
-    );
-    toast({
-      title: "Task Updated",
-      description: "Your task has been successfully updated.",
-    });
-  };
-
-  const handleDeleteTask = (taskId: string) => {
-    setTasks((prevTasks) => prevTasks.filter((task) => task.id !== taskId));
-    toast({
-      title: "Task Deleted",
-      description: "Your task has been successfully deleted.",
-      variant: "destructive",
-    });
   };
 
   const priorityColor = {
@@ -531,25 +604,10 @@ export default function KanbanBoard() {
       sensors={sensors}
       collisionDetection={closestCorners}
       onDragStart={handleDragStart}
-      onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
-      onDragCancel={handleDragCancel}
     >
       <div className="container mx-auto p-4">
         <h1 className="text-2xl font-bold mb-4">Kanban Board</h1>
-        <div className="mb-4">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button>Create Task</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Task</DialogTitle>
-              </DialogHeader>
-              <TaskForm onSubmit={handleCreateTask} />
-            </DialogContent>
-          </Dialog>
-        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {Object.entries(columns).map(([columnId, status]) => (
             <div key={columnId} className="bg-gray-100 p-4 rounded-lg">
@@ -568,8 +626,6 @@ export default function KanbanBoard() {
                         key={task.id}
                         id={task.id}
                         task={task}
-                        onEdit={handleEditTask}
-                        onDelete={handleDeleteTask}
                         priorityColor={priorityColor}
                       />
                     ))}
@@ -621,30 +677,18 @@ export default function KanbanBoard() {
 }
 
 // File: app/pages/sortable-task.tsx
-// File: app/pages/sortable-task.tsx
 "use client";
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import TaskForm from "./task-form";
 import { Task } from "../types/task";
 import { format } from "date-fns";
 
 interface SortableTaskProps {
   id: string;
   task: Task;
-  onEdit: (task: Task) => void;
-  onDelete: (id: string) => void;
   priorityColor: {
     [key: string]: string;
   };
@@ -653,8 +697,6 @@ interface SortableTaskProps {
 export default function SortableTask({
   id,
   task,
-  onEdit,
-  onDelete,
   priorityColor,
 }: SortableTaskProps) {
   const { attributes, listeners, setNodeRef, transform, transition } =
@@ -686,28 +728,6 @@ export default function SortableTask({
             Due: {format(new Date(task.dueDate), "dd/MM/yyyy")}
           </span>
         </div>
-        <div className="mt-4 space-x-2">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                Edit
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Edit Task</DialogTitle>
-              </DialogHeader>
-              <TaskForm task={task} onSubmit={onEdit} />
-            </DialogContent>
-          </Dialog>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => onDelete(task.id)}
-          >
-            Delete
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );
@@ -717,6 +737,9 @@ export default function SortableTask({
 "use client";
 
 import { useState } from "react";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "@/app/store/store";
+import { addTask, updateTask } from "@/app/store/tasksSlice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -730,14 +753,17 @@ import {
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Task } from "../types/task";
+import { useToast } from "@/hooks/use-toast";
+
 interface TaskFormProps {
   task?: Task;
-  onSubmit: (task: Task) => void;
+  onSubmit?: (task: Task) => void;
 }
 
 export default function TaskForm({ task, onSubmit }: TaskFormProps) {
-  const [formData, setFormData] = useState<Task>({
-    id: task?.id || "",
+  const dispatch = useDispatch<AppDispatch>();
+  const { toast } = useToast();
+  const [formData, setFormData] = useState<Omit<Task, "id">>({
     title: task?.title || "",
     description: task?.description || "",
     status: task?.status || "To Do",
@@ -757,7 +783,7 @@ export default function TaskForm({ task, onSubmit }: TaskFormProps) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -766,92 +792,116 @@ export default function TaskForm({ task, onSubmit }: TaskFormProps) {
       return;
     }
 
-    onSubmit(formData);
+    try {
+      if (task) {
+        // Update existing task
+        await dispatch(updateTask({ id: task.id, ...formData })).unwrap();
+        toast({
+          title: "Task Updated",
+          description: "Your task has been successfully updated.",
+        });
+      } else {
+        // Create new task
+        await dispatch(addTask(formData)).unwrap();
+        toast({
+          title: "Task Created",
+          description: "Your new task has been successfully created.",
+        });
+      }
+
+      if (onSubmit) {
+        onSubmit({ id: task?.id || "", ...formData });
+      }
+    } catch (error) {
+      console.error("Failed to save task:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save task. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Task Form</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <Label htmlFor="title">Title</Label>
-          <Input
-            id="title"
-            name="title"
-            value={formData.title}
-            onChange={handleChange}
-            required
-          />
-        </div>
-        <div>
-          <Label htmlFor="description">Description</Label>
-          <Textarea
-            id="description"
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-          />
-        </div>
-        <div>
-          <Label htmlFor="status">Status</Label>
-          <Select
-            name="status"
-            value={formData.status}
-            onValueChange={handleSelectChange("status")}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="To Do">To Do</SelectItem>
-              <SelectItem value="In Progress">In Progress</SelectItem>
-              <SelectItem value="Completed">Completed</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor="priority">Priority</Label>
-          <Select
-            name="priority"
-            value={formData.priority}
-            onValueChange={handleSelectChange("priority")}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select priority" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Low">Low</SelectItem>
-              <SelectItem value="Medium">Medium</SelectItem>
-              <SelectItem value="High">High</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor="dueDate">Due Date</Label>
-          <Input
-            id="dueDate"
-            name="dueDate"
-            type="date"
-            value={formData.dueDate}
-            onChange={handleChange}
-          />
-        </div>
-        {error && (
-          <Alert variant="destructive">
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        <Button type="submit">{task ? "Update Task" : "Create Task"}</Button>
-      </form>
-    </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="title">Title</Label>
+        <Input
+          id="title"
+          name="title"
+          value={formData.title}
+          onChange={handleChange}
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          name="description"
+          value={formData.description}
+          onChange={handleChange}
+        />
+      </div>
+      <div>
+        <Label htmlFor="status">Status</Label>
+        <Select
+          name="status"
+          value={formData.status}
+          onValueChange={handleSelectChange("status")}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="To Do">To Do</SelectItem>
+            <SelectItem value="In Progress">In Progress</SelectItem>
+            <SelectItem value="Completed">Completed</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label htmlFor="priority">Priority</Label>
+        <Select
+          name="priority"
+          value={formData.priority}
+          onValueChange={handleSelectChange("priority")}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select priority" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Low">Low</SelectItem>
+            <SelectItem value="Medium">Medium</SelectItem>
+            <SelectItem value="High">High</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label htmlFor="dueDate">Due Date</Label>
+        <Input
+          id="dueDate"
+          name="dueDate"
+          type="date"
+          value={formData.dueDate}
+          onChange={handleChange}
+        />
+      </div>
+      {error && (
+        <Alert variant="destructive">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      <Button type="submit">{task ? "Update Task" : "Create Task"}</Button>
+    </form>
   );
 }
 
 // File: app/pages/task-list.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -871,34 +921,58 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import  {useToast}  from "@/hooks/use-toast";
-import  TaskForm  from "@/app/pages/task-form";
-import { RootState } from "@/app/store/store";
-import { Task, updateTask, deleteTask } from "@/app/store/tasksSlice";
+import { useToast } from "@/hooks/use-toast";
+import TaskForm from "@/app/pages/task-form";
+import { AppDispatch, RootState } from "@/app/store/store";
+import { fetchTasks, updateTask, deleteTask } from "@/app/store/tasksSlice";
+import { Task } from "@/app/types/task";
 
 export default function TaskList() {
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const tasks = useSelector((state: RootState) => state.tasks.tasks);
+  const status = useSelector((state: RootState) => state.tasks.status);
   const { toast } = useToast();
   const [filter, setFilter] = useState({ status: "", priority: "" });
   const [sort, setSort] = useState<keyof Task>("dueDate");
   const [search, setSearch] = useState("");
 
-  const handleEditTask = (updatedTask: Task) => {
-    dispatch(updateTask(updatedTask));
-    toast({
-      title: "Task Updated",
-      description: "Your task has been successfully updated.",
-    });
+  useEffect(() => {
+    if (status === "idle") {
+      dispatch(fetchTasks());
+    }
+  }, [status, dispatch]);
+
+  const handleEditTask = async (updatedTask: Task) => {
+    try {
+      await dispatch(updateTask(updatedTask)).unwrap();
+      toast({
+        title: "Task Updated",
+        description: "Your task has been successfully updated.",
+      });
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: "There was an error updating your task.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleDeleteTask = (taskId: string) => {
-    dispatch(deleteTask(taskId));
-    toast({
-      title: "Task Deleted",
-      description: "Your task has been successfully deleted.",
-      variant: "destructive",
-    });
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      await dispatch(deleteTask(taskId)).unwrap();
+      toast({
+        title: "Task Deleted",
+        description: "Your task has been successfully deleted.",
+        variant: "destructive",
+      });
+    } catch (error) {
+      toast({
+        title: "Delete Failed",
+        description: "There was an error deleting your task.",
+        variant: "destructive",
+      });
+    }
   };
 
   const filteredAndSortedTasks = tasks
@@ -922,6 +996,14 @@ export default function TaskList() {
     High: "bg-red-100 text-red-800",
   };
 
+  if (status === "loading") {
+    return <div>Loading tasks...</div>;
+  }
+
+  if (status === "failed") {
+    return <div>Error loading tasks. Please try again later.</div>;
+  }
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Task List</h1>
@@ -935,7 +1017,7 @@ export default function TaskList() {
             <SelectValue placeholder="Filter by Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="default">All Statuses</SelectItem>
+            <SelectItem value="">All Statuses</SelectItem>
             <SelectItem value="To Do">To Do</SelectItem>
             <SelectItem value="In Progress">In Progress</SelectItem>
             <SelectItem value="Completed">Completed</SelectItem>
@@ -950,7 +1032,7 @@ export default function TaskList() {
             <SelectValue placeholder="Filter by Priority" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="default">All Priorities</SelectItem>
+            <SelectItem value="">All Priorities</SelectItem>
             <SelectItem value="Low">Low</SelectItem>
             <SelectItem value="Medium">Medium</SelectItem>
             <SelectItem value="High">High</SelectItem>
@@ -1022,12 +1104,12 @@ export default function TaskList() {
 
 // File: app/page.tsx
 "use client";
+
 import { useEffect, useMemo, useState } from "react";
-
 import { motion } from "framer-motion";
-
-import { MoveRight, PhoneCall } from "lucide-react";
+import { MoveRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 export default function Page() {
   // const [message, setMessage] = useState("Loading...");
@@ -1038,11 +1120,13 @@ export default function Page() {
   //     .then((data) => setMessage(data.message));
   // }, []);
   // const [titleNumber, setTitleNumber] = useState(0);
+
   const [titleNumber, setTitleNumber] = useState(0);
   const titles = useMemo(
     () => ["amazing", "new", "wonderful", "beautiful", "faster"],
     [],
   );
+  const router = useRouter();
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -1055,16 +1139,9 @@ export default function Page() {
     return () => clearTimeout(timeoutId);
   }, [titleNumber, titles]);
 
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (titleNumber === titles.length - 1) {
-        setTitleNumber(0);
-      } else {
-        setTitleNumber(titleNumber + 1);
-      }
-    }, 2000);
-    return () => clearTimeout(timeoutId);
-  }, [titleNumber, titles]);
+  const handleGetStarted = () => {
+    router.push("/auth");
+  };
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -1074,6 +1151,8 @@ export default function Page() {
             <div className="flex gap-4 flex-col">
               <h1 className="text-5xl md:text-7xl max-w-2xl tracking-tighter text-center font-regular">
                 <span className="text-spektr-cyan-50">Taskify</span>
+                <br />
+                <span className="text-spektr-cyan-50">is</span>
                 <span className="relative flex w-full justify-center overflow-hidden text-center md:pb-4 md:pt-1">
                   &nbsp;
                   {titles.map((title, index) => (
@@ -1107,7 +1186,7 @@ export default function Page() {
               </p>
             </div>
             <div className="flex flex-row gap-3">
-              <Button size="lg" className="gap-4">
+              <Button size="lg" className="gap-4" onClick={handleGetStarted}>
                 Get started <MoveRight className="w-4 h-4" />
               </Button>
             </div>
@@ -1127,6 +1206,7 @@ import { store } from "./store/store";
 export function Providers({ children }: { children: React.ReactNode }) {
   return <Provider store={store}>{children}</Provider>;
 }
+
 // File: app/store/store.ts
 import { configureStore } from "@reduxjs/toolkit";
 import tasksReducer from "./tasksSlice";
@@ -1141,7 +1221,8 @@ export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
 
 // File: app/store/tasksSlice.ts
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+import api from "@/lib/api";
 
 export interface Task {
   id: string;
@@ -1154,70 +1235,92 @@ export interface Task {
 
 interface TasksState {
   tasks: Task[];
+  status: "idle" | "loading" | "succeeded" | "failed";
+  error: string | null;
 }
 
 const initialState: TasksState = {
-  tasks: [
-    {
-      id: "1",
-      title: "Complete project",
-      description: "Finish the main features",
-      status: "In Progress",
-      priority: "High",
-      dueDate: "2023-12-31",
-    },
-    {
-      id: "2",
-      title: "Write documentation",
-      description: "Document the API",
-      status: "To Do",
-      priority: "Medium",
-      dueDate: "2024-01-15",
-    },
-    {
-      id: "3",
-      title: "Test application",
-      description: "Run all test suites",
-      status: "Completed",
-      priority: "Low",
-      dueDate: "2023-12-20",
-    },
-  ],
+  tasks: [],
+  status: "idle",
+  error: null,
 };
+
+export const fetchTasks = createAsyncThunk("tasks/fetchTasks", async () => {
+  const response = await api.get("/task/get");
+  return response.data;
+});
+
+export const addTask = createAsyncThunk(
+  "tasks/addTask",
+  async (task: Omit<Task, "id">) => {
+    const response = await api.post("/task/create", task);
+    return response.data;
+  },
+);
+
+export const updateTask = createAsyncThunk(
+  "tasks/updateTask",
+  async (task: Task) => {
+    const response = await api.put(`/task/update/${task.id}`, task);
+    return response.data;
+  },
+);
+
+export const deleteTask = createAsyncThunk(
+  "tasks/deleteTask",
+  async (taskId: string) => {
+    await api.delete(`/task/delete/${taskId}`);
+    return taskId;
+  },
+);
 
 export const tasksSlice = createSlice({
   name: "tasks",
   initialState,
   reducers: {
-    addTask: (state, action: PayloadAction<Task>) => {
-      state.tasks.push(action.payload);
-    },
-    updateTask: (state, action: PayloadAction<Task>) => {
-      const index = state.tasks.findIndex(
-        (task) => task.id === action.payload.id,
-      );
-      if (index !== -1) {
-        state.tasks[index] = action.payload;
-      }
-    },
-    deleteTask: (state, action: PayloadAction<string>) => {
-      state.tasks = state.tasks.filter((task) => task.id !== action.payload);
-    },
     moveTask: (
       state,
       action: PayloadAction<{ taskId: string; newStatus: Task["status"] }>,
     ) => {
-      const task = state.tasks.find(
+      const taskIndex = state.tasks.findIndex(
         (task) => task.id === action.payload.taskId,
       );
-      if (task) {
-        task.status = action.payload.newStatus;
+      if (taskIndex !== -1) {
+        state.tasks[taskIndex].status = action.payload.newStatus;
       }
     },
   },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchTasks.pending, (state) => {
+        state.status = "loading";
+      })
+      .addCase(fetchTasks.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        state.tasks = action.payload;
+      })
+      .addCase(fetchTasks.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.error.message || null;
+      })
+      .addCase(addTask.fulfilled, (state, action) => {
+        state.tasks.push(action.payload);
+      })
+      .addCase(updateTask.fulfilled, (state, action) => {
+        const index = state.tasks.findIndex(
+          (task) => task.id === action.payload.id,
+        );
+        if (index !== -1) {
+          state.tasks[index] = action.payload;
+        }
+      })
+      .addCase(deleteTask.fulfilled, (state, action) => {
+        state.tasks = state.tasks.filter((task) => task.id !== action.payload);
+      });
+  },
 });
 
-export const { addTask, updateTask, deleteTask, moveTask } = tasksSlice.actions;
+export const { moveTask } = tasksSlice.actions;
 
 export default tasksSlice.reducer;
 
@@ -1225,6 +1328,17 @@ export default tasksSlice.reducer;
 "use client";
 
 import TaskList from "../pages/task-list";
+import ProtectedRoute from "@/components/route/ProtectedRoute";
+
+// export default function TaskPage() {
+//   return (
+//     <ProtectedRoute>
+//       <div className="min-h-screen flex items-center justify-center bg-gray-100">
+//         <TaskList />
+//       </div>
+//     </ProtectedRoute>
+//   );
+// }
 
 export default function TaskPage() {
   return (
@@ -1245,81 +1359,78 @@ export interface Task {
 }
 
 // File: hooks/use-toast.ts
-"use client"
+"use client";
 
 // Inspired by react-hot-toast library
-import * as React from "react"
+import * as React from "react";
 
-import type {
-  ToastActionElement,
-  ToastProps,
-} from "@/components/ui/toast"
+import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
 
-const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+const TOAST_LIMIT = 1;
+const TOAST_REMOVE_DELAY = 2000;
 
 type ToasterToast = ToastProps & {
-  id: string
-  title?: React.ReactNode
-  description?: React.ReactNode
-  action?: ToastActionElement
-}
+  id: string;
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+  action?: ToastActionElement;
+};
 
 const actionTypes = {
   ADD_TOAST: "ADD_TOAST",
   UPDATE_TOAST: "UPDATE_TOAST",
   DISMISS_TOAST: "DISMISS_TOAST",
   REMOVE_TOAST: "REMOVE_TOAST",
-} as const
+} as const;
 
-let count = 0
+let count = 0;
 
 function genId() {
-  count = (count + 1) % Number.MAX_SAFE_INTEGER
-  return count.toString()
+  count = (count + 1) % Number.MAX_SAFE_INTEGER;
+  return count.toString();
 }
 
-type ActionType = typeof actionTypes
+type ActionType = typeof actionTypes;
 
 type Action =
   | {
-      type: ActionType["ADD_TOAST"]
-      toast: ToasterToast
+      type: ActionType["ADD_TOAST"];
+      toast: ToasterToast;
     }
   | {
-      type: ActionType["UPDATE_TOAST"]
-      toast: Partial<ToasterToast>
+      type: ActionType["UPDATE_TOAST"];
+      toast: Partial<ToasterToast>;
     }
   | {
-      type: ActionType["DISMISS_TOAST"]
-      toastId?: ToasterToast["id"]
+      type: ActionType["DISMISS_TOAST"];
+      toastId?: ToasterToast["id"];
     }
   | {
-      type: ActionType["REMOVE_TOAST"]
-      toastId?: ToasterToast["id"]
-    }
+      type: ActionType["REMOVE_TOAST"];
+      toastId?: ToasterToast["id"];
+    };
 
 interface State {
-  toasts: ToasterToast[]
+  toasts: ToasterToast[];
 }
 
-const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
+const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
 
 const addToRemoveQueue = (toastId: string) => {
   if (toastTimeouts.has(toastId)) {
-    return
+    return;
   }
 
   const timeout = setTimeout(() => {
-    toastTimeouts.delete(toastId)
+    toastTimeouts.delete(toastId);
     dispatch({
       type: "REMOVE_TOAST",
       toastId: toastId,
-    })
-  }, TOAST_REMOVE_DELAY)
+    });
+  }, TOAST_REMOVE_DELAY);
 
-  toastTimeouts.set(toastId, timeout)
-}
+  toastTimeouts.set(toastId, timeout);
+};
 
 export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
@@ -1327,27 +1438,27 @@ export const reducer = (state: State, action: Action): State => {
       return {
         ...state,
         toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
-      }
+      };
 
     case "UPDATE_TOAST":
       return {
         ...state,
         toasts: state.toasts.map((t) =>
-          t.id === action.toast.id ? { ...t, ...action.toast } : t
+          t.id === action.toast.id ? { ...t, ...action.toast } : t,
         ),
-      }
+      };
 
     case "DISMISS_TOAST": {
-      const { toastId } = action
+      const { toastId } = action;
 
       // ! Side effects ! - This could be extracted into a dismissToast() action,
       // but I'll keep it here for simplicity
       if (toastId) {
-        addToRemoveQueue(toastId)
+        addToRemoveQueue(toastId);
       } else {
         state.toasts.forEach((toast) => {
-          addToRemoveQueue(toast.id)
-        })
+          addToRemoveQueue(toast.id);
+        });
       }
 
       return {
@@ -1358,46 +1469,46 @@ export const reducer = (state: State, action: Action): State => {
                 ...t,
                 open: false,
               }
-            : t
+            : t,
         ),
-      }
+      };
     }
     case "REMOVE_TOAST":
       if (action.toastId === undefined) {
         return {
           ...state,
           toasts: [],
-        }
+        };
       }
       return {
         ...state,
         toasts: state.toasts.filter((t) => t.id !== action.toastId),
-      }
+      };
   }
-}
+};
 
-const listeners: Array<(state: State) => void> = []
+const listeners: Array<(state: State) => void> = [];
 
-let memoryState: State = { toasts: [] }
+let memoryState: State = { toasts: [] };
 
 function dispatch(action: Action) {
-  memoryState = reducer(memoryState, action)
+  memoryState = reducer(memoryState, action);
   listeners.forEach((listener) => {
-    listener(memoryState)
-  })
+    listener(memoryState);
+  });
 }
 
-type Toast = Omit<ToasterToast, "id">
+type Toast = Omit<ToasterToast, "id">;
 
 function toast({ ...props }: Toast) {
-  const id = genId()
+  const id = genId();
 
   const update = (props: ToasterToast) =>
     dispatch({
       type: "UPDATE_TOAST",
       toast: { ...props, id },
-    })
-  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
+    });
+  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id });
 
   dispatch({
     type: "ADD_TOAST",
@@ -1406,37 +1517,68 @@ function toast({ ...props }: Toast) {
       id,
       open: true,
       onOpenChange: (open) => {
-        if (!open) dismiss()
+        if (!open) dismiss();
       },
     },
-  })
+  });
 
   return {
     id: id,
     dismiss,
     update,
-  }
+  };
 }
 
 function useToast() {
-  const [state, setState] = React.useState<State>(memoryState)
+  const [state, setState] = React.useState<State>(memoryState);
 
   React.useEffect(() => {
-    listeners.push(setState)
+    listeners.push(setState);
     return () => {
-      const index = listeners.indexOf(setState)
+      const index = listeners.indexOf(setState);
       if (index > -1) {
-        listeners.splice(index, 1)
+        listeners.splice(index, 1);
       }
-    }
-  }, [state])
+    };
+  }, [state]);
 
   return {
     ...state,
     toast,
     dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
-  }
+  };
 }
 
-export { useToast, toast }
+export { useToast, toast };
+
+// File: lib/api.ts
+import axios from "axios";
+
+const api = axios.create({
+  baseURL: "http://localhost:8080/api/v1",
+  withCredentials: true,
+});
+
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  },
+);
+
+export default api;
+
+// File: lib/utils.ts
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
 

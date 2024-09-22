@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# This works for Node.js, Express, and MongoDB projects currently
+# Put this in your root folder of your project
+# run the command chmod +x get_code_context.sh
+# then run ./get_code_context.sh
+
 # Use the current directory as the project directory
 project_dir=$(pwd)
 
@@ -12,25 +17,16 @@ if [ -f "$output_file" ]; then
 fi
 
 # List of directories to look for
-directories=("pages" "app" "api" "styles" "utils" "hooks" "constants" "services" "types", "lib")
-
-# List of directories to ignore
-ignore_dirs=("fonts")
+directories=("src" "route" "controller" "model" "utils" "config" "middleware" "views")
 
 # List of file types to ignore
-ignore_files=("*.ico" "*.png" "*.jpg" "*.jpeg" "*.gif" "*.svg" "GeistMonoVF.woff" "GeistVF.woff")
+ignore_files=("*.ico" "*.png" "*.jpg" "*.jpeg" "*.gif" "*.svg" "*.node_modules" "*.package.json" "*.gitignore" "*.README.md" "*.package-lock.json")
 
 # Recursive function to read files and append their content
 read_files() {
-  for entry in "$1"/*
-  do
+  for entry in "$1"/* ; do
     if [ -d "$entry" ]; then
-      # Check if the directory should be ignored
-      dir_name=$(basename "$entry")
-      if [[ " ${ignore_dirs[*]} " == *" $dir_name "* ]]; then
-        continue
-      fi
-      # If not ignored, call this function recursively
+      # If entry is a directory, call this function recursively
       read_files "$entry"
     elif [ -f "$entry" ]; then
       # Check if the file type should be ignored

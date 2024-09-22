@@ -20,8 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import  {useToast}  from "@/hooks/use-toast";
-import  TaskForm  from "@/app/pages/task-form";
+import { useToast } from "@/hooks/use-toast";
+import TaskForm from "@/app/pages/task-form";
 import { RootState } from "@/app/store/store";
 import { Task, updateTask, deleteTask } from "@/app/store/tasksSlice";
 
